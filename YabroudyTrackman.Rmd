@@ -1,0 +1,99 @@
+---
+title: "Trackman Data"
+author: "Hailey Yabroudy"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  html_notebook: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r}
+library(readr)
+player_trackman <- read_csv("/Users/haileyemma/Documents/JObs/Giants/player_trackman.csv")
+
+library("dplyr", lib.loc="/Library/Frameworks/R.framework/Versions/4.0/Resources/library")
+
+library("ggplot2", lib.loc="/Library/Frameworks/R.framework/Versions/4.0/Resources/library")
+```
+
+**Task: Pitching coach is concerned with one of his pitchers' arsenals and the lack of success their having with his raw stuff. Coach asked if I can help come up with some solutions to work on with his pitcher.**
+**Include overview of recommendations to coach (tables, charts, visuals) and documented code for execution.**
+
+**Cleaning the Data**
+
+```{r}
+str(player_trackman)
+```
+
+**Since so many of these columns are identified as characters, rather than numbers, I need to convert them into numeric form.**
+```{r}
+cols.num <- c("rel_speed", "spin_rate", "vert_break", "induced_vert_break", "horz_break", "extension", "exit_speed", "angle", "direction", "distance", "bearing")
+player_trackman[cols.num] <- sapply(player_trackman[cols.num], as.numeric)
+```
+
+**I found that two of the rows had nothing in them, so I deleted them to save myself some future trouble**
+```{r}
+player_trackman <- player_trackman[-c(414, 439),]
+```
+
+**find pitch types**
+```{r}
+df <- player_trackman
+count(df, tagged_pitch_type)
+```
+
+**pitch call based on pitch type**
+```{r echo=TRUE}
+df %>% group_by(tagged_pitch_type, pitch_call) %>% summarise(count = n())
+table(df$tagged_pitch_type, df$pitch_call)
+```
+
+**average speed per pitch**
+```{r}
+aggregate(rel_speed ~ tagged_pitch_type, df, mean, na.rm=TRUE)
+```
+
+**av spin rate per pitch**
+```{r}
+aggregate(spin_rate ~ tagged_pitch_type, df, mean, na.rm=TRUE)
+```
+
+**vert + horz break for each pitch**
+```{r}
+aggregate(induced_vert_break ~ tagged_pitch_type, df, mean, na.rm=TRUE)
+aggregate(horz_break ~ tagged_pitch_type, df, mean, na.rm=TRUE)
+```
+
+**Our pitcher is below average on his spin rates in comparison with the rest of the league. This results in him not getting enough spin on his pitches and can explain the lack of success he's been having.**
+
+After doing some research, I found that the MLBs average spin rate for each pitch was:
+Curve = 2500 rpms
+4 seam = 2300 rpms
+change = 1700 rpms
+slider = 2500 rpms
+
+**Compare league and individuals spin rates (chose to leave out sinker because he has only thrown 2):**
+```{r}
+pitch_type <- c("ChangeUp", "ChangeUp", "Curveball", "Curveball","Fastball", "Fastball", "Slider", "Slider")
+league_or_indiv <- c("league", "individual", "league", "individual", "league", "individual", "league", "individual")
+spin_rate <- c(1700, 1599.473, 2500, 2291.709, 2300, 2318.137, 2500, 2198.644)
+vert <- c(10, 4.16, 16, 14.53, 20, 14, 5, 2.87)
+horz <- c(15, 14, -10, -8, 12, 10, -2, -1)
+spins <- data.frame(pitch_type, league_or_indiv, spin_rate, vert, horz)
+
+ggplot(spins, aes(fill=league_or_indiv, y=spin_rate, x=pitch_type))+
+geom_bar(position="dodge", stat="identity")
+
+ggplot(spins, aes(fill=league_or_indiv, y=vert, x=pitch_type))+ geom_bar(position="dodge", stat="identity")
+
+ggplot(spins, aes(fill=league_or_indiv, y=horz, x=pitch_type))+ geom_bar(position="dodge", stat="identity")
+```
+
+**Based on these charts, we can see that our pitcher is below the league average for all of his spin rates and the vertical/horizontal breaks reflect that. If he's not getting enough spin on his pitches, then they won't be getting the break needed in order to be effective. The speed that he's getting on all of his pitches also seem lower than they should be, and that could account for why he's not getting enough spin.**
+
+**As a college pitcher myself, I know what it's like to be frustrated by a pitch that's not working exactly how you want it to and spending entire practices just working on that pitch. It is so important to be able to get the right spin on a pitch and be able to do it consistently. I've spent my time during practices solely working on doing flicks to be able to get the feeling of the right way the ball should be spinning off of my fingers. **
+
+
